@@ -56,7 +56,8 @@ def generate_launch_description():
             package="occupancy_grid_map",
             executable="occupancy_grid_map",
             name="occupancy_grid_map",
-            output="screen"
+            output="screen",
+            parameters=[{"use_sim_time": True}],
         ),
 
         # ✅ Teleop node
@@ -83,10 +84,20 @@ def generate_launch_description():
         # ),
 
         # ✅ Static transform (tf2!)
-        Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="odom_map_broadcaster",
-            arguments=["0", "0", "0", "0", "0", "0", "map", "odom"],
-        ),
+        # Node(
+        #     package="tf2_ros",
+        #     executable="static_transform_publisher",
+        #     name="odom_map_broadcaster",
+        #     parameters=[{"use_sim_time": True}],
+        #     arguments=[
+        #         "--x", "0",
+        #         "--y", "0",
+        #         "--z", "0",
+        #         "--yaw", "0",
+        #         "--pitch", "0",
+        #         "--roll", "0",
+        #         "--frame-id", "map",
+        #         "--child-frame-id", "odom",
+        #     ],
+        # )
     ])

@@ -48,15 +48,45 @@ OccupancyGridMap::OccupancyGridMap(
 
     // Publisher
     map_publisher_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
-        "/occupancy_grid", 1
+        "/occupancy_grid", rclcpp::QoS(1).transient_local()
     );
 
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
+    tf_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(50),  // 20 Hz is perfect
+        std::bind(&OccupancyGridMap::publishMapToOdom, this)
+    );
+
     current_pose = {0, 0, 0};
 
     RCLCPP_INFO(this->get_logger(), "Initialized OccupancyGridMap");
+}
+
+void OccupancyGridMap::publishMapToOdom()
+{
+    geometry_msgs::msg::TransformStamped t;
+
+    t.header.stamp = this->get_clock()->now();
+    t.header.frame_id = "map";
+    t.child_frame_id = "odom";
+
+    // For now: identity transform
+    t.transform.translation.x = 0.0;
+    t.transform.translation.y = 0.0;
+    t.transform.translation.z = 0.0;
+
+    t.transform.rotation.x = 0.0;
+    t.transform.rotation.y = 0.0;
+    t.transform.rotation.z = 0.0;
+    t.transform.rotation.w = 1.0;
+
+    //RCLCPP_INFO(this->get_logger(), "Publishing map -> odom TF");
+
+    tf_broadcaster_->sendTransform(t);
 }
 
 float OccupancyGridMap::get_resolution() const
@@ -119,12 +149,25 @@ void OccupancyGridMap::scanCallback(
 
 void OccupancyGridMap::updatePoseFromTF()
 {
+    const std::string target = "odom";
+    const std::string source = "base_link";
+
+    if (!tf_buffer_->canTransform(
+            target,
+            source,
+            tf2::TimePointZero,
+            tf2::durationFromSec(0.1)))   // small timeout
+    {
+        RCLCPP_WARN(this->get_logger(), "TF not available yet");
+        return;
+    }
+
     try
     {
         auto transform = tf_buffer_->lookupTransform(
-            "map",        // target frame
+            "odom",        // target frame
             "base_link",  // robot frame (or smb base)
-            tf2::TimePointZero
+            this->get_clock()->now(), tf2::durationFromSec(0.1)
         );
 
         double x = transform.transform.translation.x;
@@ -185,7 +228,7 @@ void OccupancyGridMap::integrate(
     for (size_t i = 0; i < msg.ranges.size(); ++i)
     {
         //auto angle = normalize_angle(
-            auto angle = pose[2] - msg.angle_min + msg.angle_increment * i;// + M_PI
+            auto angle = pose[2] - msg.angle_min + msg.angle_increment * i;// + M_PI;
         //);
 
         auto range = msg.ranges[i];
@@ -284,7 +327,7 @@ nav_msgs::msg::OccupancyGrid OccupancyGridMap::publish_map() const
 {
     nav_msgs::msg::OccupancyGrid msg;
 
-    msg.header.frame_id = map_frame;
+    msg.header.frame_id = "odom";
     msg.header.stamp = this->now();
 
     msg.info.resolution = m_resolution;

@@ -19,6 +19,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
+#include <tf2_ros/transform_broadcaster.h>
+
 namespace occupancy_grid_map
 {
 
@@ -102,6 +104,9 @@ public:
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    rclcpp::TimerBase::SharedPtr tf_timer_;
+
 private:
     void bresenham(
         const Eigen::Vector2f & start_point,
@@ -118,6 +123,8 @@ private:
     double normalize_angle(double angle);
 
     Eigen::Vector3d quaternion2rpy(double x, double y, double z, double w);
+
+    void publishMapToOdom();
 
 private:
     // ROS 2 interfaces

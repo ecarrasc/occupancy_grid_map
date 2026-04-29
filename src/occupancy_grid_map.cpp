@@ -137,7 +137,7 @@ void OccupancyGridMap::scanCallback(
     const sensor_msgs::msg::LaserScan::SharedPtr msg
 )
 {
-    updatePoseFromTF();
+    updatePoseFromTF(msg->header.stamp);
 
     integrate(*msg, current_pose);
 
@@ -147,7 +147,7 @@ void OccupancyGridMap::scanCallback(
     publish_map();
 }
 
-void OccupancyGridMap::updatePoseFromTF()
+void OccupancyGridMap::updatePoseFromTF(const rclcpp::Time & time)
 {
     const std::string target = "odom";
     const std::string source = "base_link";
@@ -167,7 +167,7 @@ void OccupancyGridMap::updatePoseFromTF()
         auto transform = tf_buffer_->lookupTransform(
             "odom",        // target frame
             "base_link",  // robot frame (or smb base)
-            this->get_clock()->now(), tf2::durationFromSec(0.1)
+            time, tf2::durationFromSec(0.1)
         );
 
         double x = transform.transform.translation.x;
@@ -315,7 +315,7 @@ nav_msgs::msg::OccupancyGrid OccupancyGridMap::publish_map() const
 {
     nav_msgs::msg::OccupancyGrid msg;
 
-    msg.header.frame_id = "odom";
+    msg.header.frame_id = "map";
     msg.header.stamp = this->now();
 
     msg.info.resolution = m_resolution;

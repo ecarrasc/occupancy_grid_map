@@ -116,7 +116,7 @@ private:
 
     Eigen::Vector2i bound_end_cell(Eigen::Vector2i end_cell_unbounded);
 
-    void updatePoseFromTF();
+    void updatePoseFromTF(const rclcpp::Time & time);
 
     size_t coord_to_index(const Eigen::Vector2i & coord) const;
 

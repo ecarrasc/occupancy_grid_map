@@ -47,7 +47,7 @@ def generate_launch_description():
                 os.path.join(pkg_share, 'launch', 'smb_sim_se.launch.py')
             ),
             launch_arguments={
-                'rviz_config': os.path.join(pkg_share, 'rviz', 'smb_localization.rviz')
+                'rviz_config': os.path.join(pkg_share, 'rviz', 'smb_occupancy_grid_map.rviz')
             }.items()
         ),
 
@@ -84,20 +84,20 @@ def generate_launch_description():
         # ),
 
         # ✅ Static transform (tf2!)
-        # Node(
-        #     package="tf2_ros",
-        #     executable="static_transform_publisher",
-        #     name="odom_map_broadcaster",
-        #     parameters=[{"use_sim_time": True}],
-        #     arguments=[
-        #         "--x", "0",
-        #         "--y", "0",
-        #         "--z", "0",
-        #         "--yaw", "0",
-        #         "--pitch", "0",
-        #         "--roll", "0",
-        #         "--frame-id", "map",
-        #         "--child-frame-id", "odom",
-        #     ],
-        # )
+        Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            name="odom_map_broadcaster",
+            parameters=[{"use_sim_time": True}],
+            arguments=[
+                "--x", "0",
+                "--y", "0",
+                "--z", "0",
+                "--yaw", "0",
+                "--pitch", "0",
+                "--roll", "0",
+                "--frame-id", "map",
+                "--child-frame-id", "odom",
+            ],
+        )
     ])

@@ -175,50 +175,19 @@ void OccupancyGridMap::updatePoseFromTF()
 
         auto q = transform.transform.rotation;
 
-        Eigen::Vector3d rpy = quaternion2rpy(q.x, q.y, q.z, q.w);
+        tf2::Quaternion quat(q.x, q.y, q.z, q.w);
+        double roll, pitch, yaw;
+        tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 
         current_pose[0] = x;
         current_pose[1] = y;
-        current_pose[2] = rpy[2];
+        current_pose[2] = yaw;
     }
     catch (const tf2::TransformException & ex)
     {
         RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
     }
 }
-
-// void OccupancyGridMap::poseCallback(
-//     const gazebo_msgs::msg::ModelStates::SharedPtr msg
-// )
-// {
-//     int smb_index = -1;
-
-//     for (size_t i = 0; i < msg->name.size(); i++)
-//     {
-//         if (msg->name[i] == "smb")
-//             smb_index = i;
-//     }
-
-//     if (smb_index < 0)
-//     {
-//         RCLCPP_WARN(this->get_logger(), "SMB model not found in ModelStates");
-//         return;
-//     }
-
-//     double x = msg->pose[smb_index].position.x;
-//     double y = msg->pose[smb_index].position.y;
-
-//     double quat_x = msg->pose[smb_index].orientation.x;
-//     double quat_y = msg->pose[smb_index].orientation.y;
-//     double quat_z = msg->pose[smb_index].orientation.z;
-//     double quat_w = msg->pose[smb_index].orientation.w;
-
-//     Eigen::Vector3d rpy = quaternion2rpy(quat_x, quat_y, quat_z, quat_w);
-
-//     current_pose[0] = x;
-//     current_pose[1] = y;
-//     current_pose[2] = rpy[2];
-// }
 
 void OccupancyGridMap::integrate(
     const sensor_msgs::msg::LaserScan & msg,
@@ -227,22 +196,41 @@ void OccupancyGridMap::integrate(
 {
     for (size_t i = 0; i < msg.ranges.size(); ++i)
     {
-        //auto angle = normalize_angle(
-            auto angle = pose[2] - msg.angle_min + msg.angle_increment * i;// + M_PI;
-        //);
-
-        auto range = msg.ranges[i];
+        double beam_angle = msg.angle_min + i * msg.angle_increment;
+        double range = msg.ranges[i];
 
         if (!std::isinf(range))
         {
-            auto end_point = Eigen::Vector2f(
-                pose[0] + range * std::cos(angle),
-                pose[1] + range * std::sin(angle)
-            );
+            // laser frame
+            float x_l = range * std::cos(beam_angle);
+            float y_l = range * std::sin(beam_angle);
+
+            // base_link frame
+            float x_b = x_l + 0.025;
+            float y_b = y_l;
+
+            // world frame
+            float x_w =
+                pose[0] + std::cos(pose[2]) * x_b - std::sin(pose[2]) * y_b;
+
+            float y_w =
+                pose[1] + std::sin(pose[2]) * x_b + std::cos(pose[2]) * y_b;
+            
+            if (i == msg.ranges.size() / 2)
+            {
+                RCLCPP_INFO(this->get_logger(),
+                    "beam: angle=%f range=%f world=(%f,%f)",
+                    beam_angle, range, x_w, y_w);
+                RCLCPP_INFO(this->get_logger(),
+                    "yaw = %f", pose[2]);
+                RCLCPP_INFO(this->get_logger(),
+                    "yaw = %f deg",
+                    pose[2] * 180.0 / M_PI);
+            }
 
             bresenham(
                 {pose[0], pose[1]},
-                end_point,
+                {x_w, y_w},
                 std::abs(range - msg.range_max) < 0.1
             );
         }

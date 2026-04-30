@@ -176,6 +176,10 @@ void OccupancyGridMap::integrate(
             float x_w = pose[0] + std::cos(pose[2]) * x_b - std::sin(pose[2]) * y_b;
 
             float y_w = pose[1] + std::sin(pose[2]) * x_b + std::cos(pose[2]) * y_b;
+
+            // laser frame to world frame
+            float x_l_w = pose[0] + std::cos(pose[2]) * 0.025;
+            float y_l_w = pose[1] + std::sin(pose[2]) * 0.025;
             
             if (i == msg.ranges.size() / 2)
             {
@@ -184,7 +188,7 @@ void OccupancyGridMap::integrate(
             }
 
             bresenham(
-                {pose[0], pose[1]},
+                {x_l_w, y_l_w},
                 {x_w, y_w},
                 std::abs(range - msg.range_max) < 0.1
             );

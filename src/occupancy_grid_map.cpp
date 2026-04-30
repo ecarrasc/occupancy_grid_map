@@ -40,12 +40,6 @@ OccupancyGridMap::OccupancyGridMap(
         std::bind(&OccupancyGridMap::scanCallback, this, std::placeholders::_1)
     );
 
-    // pose_subscriber_ = this->create_subscription<gazebo_msgs::msg::ModelStates>(
-    //     pose_topic_,
-    //     subscriber_queue_size_,
-    //     std::bind(&OccupancyGridMap::poseCallback, this, std::placeholders::_1)
-    // );
-
     // Publisher
     map_publisher_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
         "/occupancy_grid", rclcpp::QoS(1).transient_local()
@@ -56,37 +50,9 @@ OccupancyGridMap::OccupancyGridMap(
 
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
-    tf_timer_ = this->create_wall_timer(
-        std::chrono::milliseconds(50),  // 20 Hz is perfect
-        std::bind(&OccupancyGridMap::publishMapToOdom, this)
-    );
-
     current_pose = {0, 0, 0};
 
     RCLCPP_INFO(this->get_logger(), "Initialized OccupancyGridMap");
-}
-
-void OccupancyGridMap::publishMapToOdom()
-{
-    geometry_msgs::msg::TransformStamped t;
-
-    t.header.stamp = this->get_clock()->now();
-    t.header.frame_id = "map";
-    t.child_frame_id = "odom";
-
-    // For now: identity transform
-    t.transform.translation.x = 0.0;
-    t.transform.translation.y = 0.0;
-    t.transform.translation.z = 0.0;
-
-    t.transform.rotation.x = 0.0;
-    t.transform.rotation.y = 0.0;
-    t.transform.rotation.z = 0.0;
-    t.transform.rotation.w = 1.0;
-
-    //RCLCPP_INFO(this->get_logger(), "Publishing map -> odom TF");
-
-    tf_broadcaster_->sendTransform(t);
 }
 
 float OccupancyGridMap::get_resolution() const
@@ -140,9 +106,6 @@ void OccupancyGridMap::scanCallback(
     updatePoseFromTF(msg->header.stamp);
 
     integrate(*msg, current_pose);
-
-    //auto nav_msg = publish_map();
-    //(void)nav_msg; // suppress unused warning if needed
 
     publish_map();
 }
@@ -210,22 +173,14 @@ void OccupancyGridMap::integrate(
             float y_b = y_l;
 
             // world frame
-            float x_w =
-                pose[0] + std::cos(pose[2]) * x_b - std::sin(pose[2]) * y_b;
+            float x_w = pose[0] + std::cos(pose[2]) * x_b - std::sin(pose[2]) * y_b;
 
-            float y_w =
-                pose[1] + std::sin(pose[2]) * x_b + std::cos(pose[2]) * y_b;
+            float y_w = pose[1] + std::sin(pose[2]) * x_b + std::cos(pose[2]) * y_b;
             
             if (i == msg.ranges.size() / 2)
             {
-                RCLCPP_INFO(this->get_logger(),
-                    "beam: angle=%f range=%f world=(%f,%f)",
-                    beam_angle, range, x_w, y_w);
-                RCLCPP_INFO(this->get_logger(),
-                    "yaw = %f", pose[2]);
-                RCLCPP_INFO(this->get_logger(),
-                    "yaw = %f deg",
-                    pose[2] * 180.0 / M_PI);
+                RCLCPP_INFO(this->get_logger(), "beam: angle=%f range=%f world=(%f,%f)", beam_angle, range, x_w, y_w);
+                RCLCPP_INFO(this->get_logger(), "yaw = %f", pose[2]);
             }
 
             bresenham(

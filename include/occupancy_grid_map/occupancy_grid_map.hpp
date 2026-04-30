@@ -12,7 +12,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
-//#include <gazebo_msgs/msg/model_states.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <tf2_ros/buffer.h>
@@ -120,16 +119,9 @@ private:
 
     size_t coord_to_index(const Eigen::Vector2i & coord) const;
 
-    double normalize_angle(double angle);
-
-    Eigen::Vector3d quaternion2rpy(double x, double y, double z, double w);
-
-    void publishMapToOdom();
-
 private:
     // ROS 2 interfaces
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_subscriber_;
-    //rclcpp::Subscription<gazebo_msgs::msg::ModelStates>::SharedPtr pose_subscriber_;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
 
     std::string scan_topic_;
@@ -157,18 +149,6 @@ private:
 inline size_t OccupancyGridMap::coord_to_index(const Eigen::Vector2i & coord) const
 {
     return coord[1] * m_cell_width + coord[0];
-}
-
-inline double OccupancyGridMap::normalize_angle(double angle)
-{
-    return std::atan2(std::sin(angle), std::cos(angle));
-}
-
-inline Eigen::Vector3d OccupancyGridMap::quaternion2rpy(double x, double y, double z, double w)
-{
-    Eigen::Quaterniond q(w, x, y, z);
-    Eigen::Vector3d rpy = q.toRotationMatrix().eulerAngles(0, 1, 2);
-    return rpy;
 }
 
 } // namespace occupancy_grid_map
